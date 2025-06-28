@@ -56,6 +56,8 @@ app.register_blueprint(auth)
 app.register_blueprint(team, url_prefix='/api/team')
 app.register_blueprint(admin, url_prefix='/api/admin')
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 @app.route('/api/players')
 def get_players():
     try:
@@ -159,4 +161,4 @@ if __name__ == "__main__":
         print(f"Found {len(players)} players in database")
         
     print("Starting Flask server...")
-    app.run(port=5001, debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
