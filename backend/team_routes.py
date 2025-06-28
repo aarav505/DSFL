@@ -355,7 +355,7 @@ def get_players():
         } for player in players]
         return jsonify(players_data), 200
     except Exception as e:
-        return jsonify({'message': 'Error fetching players', 'error': str(e)}), 500
+        return jsonify({'message': 'Error fetching players', 'error': str(e)}), 500 
 
 @team.route('/teams/<int:team_id>', methods=['GET'])
 @token_required
