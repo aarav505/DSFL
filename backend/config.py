@@ -5,7 +5,7 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 class Config:
     SECRET_KEY = "dsfl-secret"  # change in production
     JWT_SECRET = "dsfl-jwt-secret"  # used for JWT token encryption
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'dsfl.db')
+    SQLALCHEMY_DATABASE_URI = 'postgresql://dsfl_user:ZsxyO58hGpKp5npOuOdKOF9K2l3tshWP@dpg-d1g2blali9vc73a5sb1g-a.singapore-postgres.render.com/dsfl'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # Fantasy Football Specific Constants
