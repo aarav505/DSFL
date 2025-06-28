@@ -116,8 +116,8 @@ def get_players():
 
 # Serve React App's index.html for the root route
 @app.route('/')
-def serve_index():
-    return send_from_directory(app.static_folder, 'index.html')
+def home():
+    return "DSFL Backend is running."
 
 # Removing duplicate route since we already have /api/players defined above
 
