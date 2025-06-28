@@ -41,5 +41,5 @@ This is a full-stack application with separate frontend and backend components.
 ## Technologies Used
 
 - Frontend: React.js
-- Backend: Node.js with Express
+- Backend: Flask
 - Database: SQLite 
