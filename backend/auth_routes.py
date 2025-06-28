@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from models import db, User
-from utils import generate_token
+from utils import generate_token, validate_email
 
 auth = Blueprint('auth', __name__)
 
@@ -19,11 +19,31 @@ def signup():
     password = data.get("password")
     house = data.get("house")
 
+    # Validate email format and extract information
+    is_valid, result = validate_email(email)
+    if not is_valid:
+        return jsonify({"message": result}), 400
+
     if User.query.filter_by(email=email).first():
         return jsonify({"message": "Email already registered"}), 409
 
     try:
-        new_user = User(name=name, email=email, house=house)
+        # Create new user with extracted information
+        new_user = User(
+            name=name,
+            email=email,
+            house=house,
+            user_type=result['user_type']
+        )
+        
+        # Add additional fields based on user type
+        if result['user_type'] == 'student':
+            new_user.school_no = result['school_no']
+            new_user.batch = result['batch']
+            new_user.form = result['form']
+        else:  # teacher
+            new_user.initials = result['initials']
+        
         new_user.set_password(password)
         db.session.add(new_user)
         db.session.commit()
@@ -44,7 +64,7 @@ def login():
         return jsonify({
             "message": "Login successful",
             "token": token,
-            "user": {"id": user.id, "name": user.name, "house": user.house}
+            "user": user.to_dict()
         }), 200
 
     return jsonify({"message": "Invalid email or password"}), 401

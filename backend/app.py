@@ -3,8 +3,10 @@ from config import Config
 from models import db, bcrypt, Player
 from auth_routes import auth
 from team_routes import team
+from admin_routes import admin
 from utils import token_required
 from flask_cors import CORS
+from flask_migrate import Migrate
 from sqlalchemy.exc import IntegrityError
 import os
 import csv
@@ -37,25 +39,77 @@ def handle_integrity_error(error):
 
 @app.errorhandler(Exception)
 def handle_error(error):
+    import traceback
+    print("Global error handler caught exception:")
+    print(f"Exception type: {type(error)}")
+    print(f"Exception message: {str(error)}")
+    print("Full traceback:")
+    print(traceback.format_exc())
     return jsonify({"message": "An error occurred", "error": str(error)}), 500
 
+# Initialize extensions
 db.init_app(app)
 bcrypt.init_app(app)
+migrate = Migrate(app, db)
 
 app.register_blueprint(auth)
 app.register_blueprint(team, url_prefix='/api/team')
+app.register_blueprint(admin, url_prefix='/api/admin')
 
 @app.route('/api/players')
 def get_players():
     try:
-        with open('Players.csv', 'r') as file:
-            reader = csv.DictReader(file)
-            players = list(reader)
-            # Convert price strings to integers
-            for player in players:
-                player['price'] = int(player['price'])
-            return jsonify(players)
+        # First, check if we have any players in the database
+        existing_players = Player.query.all()
+        print(f"Found {len(existing_players)} existing players in database")
+        
+        if not existing_players:
+            print("No players in database, loading from CSV...")
+            csv_path = os.path.join(BASE_DIR, 'Players.csv')
+            print(f"Looking for CSV file at: {csv_path}")
+            
+            if not os.path.exists(csv_path):
+                print(f"CSV file not found at {csv_path}")
+                return jsonify({"error": "Players CSV file not found"}), 500
+                
+            # Load players from CSV into database
+            with open(csv_path, 'r') as file:
+                reader = csv.DictReader(file)
+                player_count = 0
+                for row in reader:
+                    try:
+                        player = Player(
+                            name=row['name'],
+                            position=row['position'],
+                            price=int(row['price']),
+                            house=row['house']
+                        )
+                        db.session.add(player)
+                        player_count += 1
+                    except Exception as e:
+                        print(f"Error processing row: {row}")
+                        print(f"Error: {str(e)}")
+                        continue
+                
+                print(f"Added {player_count} players to database")
+                db.session.commit()
+                print("Players loaded into database successfully")
+
+        # Return all players from database
+        players = Player.query.all()
+        print(f"Returning {len(players)} players from database")
+        players_data = [{
+            'id': player.id,
+            'name': player.name,
+            'position': player.position,
+            'price': player.price,
+            'house': player.house
+        } for player in players]
+        return jsonify(players_data), 200
     except Exception as e:
+        import traceback
+        print("Error loading players:")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 # Serve React App's index.html for the root route
@@ -80,7 +134,29 @@ def serve_react_app(path):
 def protected():
     return jsonify({"message": "You're authenticated!", "user": getattr(request, 'user', None)})
 
-if __name__ == "__main__":
-    with app.app_context():
+# Temporary route to recreate database tables
+@app.route('/api/recreate_db')
+def recreate_db():
+    try:
+        db.drop_all()
         db.create_all()
+        return jsonify({"message": "Database tables recreated successfully"}), 200
+    except Exception as e:
+        import traceback
+        print("Error recreating database:")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    print("Initializing database...")
+    with app.app_context():
+        print("Creating database tables...")
+        db.create_all()
+        print("Database tables created successfully")
+        
+        # Check if we have any players
+        players = Player.query.all()
+        print(f"Found {len(players)} players in database")
+        
+    print("Starting Flask server...")
     app.run(port=5001, debug=True)
